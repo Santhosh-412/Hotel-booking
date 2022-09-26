@@ -1,0 +1,116 @@
+# Hotel-booking
+
+from django.http import HttpResponse
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from app.sqlmodel import rooms
+from rest_framework import status
+
+@api_view(['GET', 'POST'])
+def healthz1(request):
+    return Response(data={"status": "ok"})
+
+
+@api_view(['GET'])
+def rooms_list(request):
+    if request.method =='GET':
+        d1={}
+        list1=[]
+        obj = rooms.objects.all();
+        for i in obj:
+            d={}
+            d["room_id"]=i.room_id
+            d["maximum_room_occupancy"]=i.maximum_room_occupancy
+            d["guest_email"]=i.guest_email
+            d["room_status"]=i.room_status
+            list1 = list1+[d]
+        d1["rooms"]=list1
+        return Response(status=status.HTTP_200_OK, data=d1)
+
+@api_view(['GET','POST','DELETE'])
+def rooms_booking(request,id1):
+    room_id1 = request.data.get("room_id")
+    maximum_room_occupancy1 = request.data.get("maximum_room_occupancy")
+    guest_email1 = request.data.get("guest_email")
+    room_status1 = request.data.get("room_status")
+    if request.method == 'GET':
+        d={}
+        x = rooms.objects.filter(room_id = id1)
+        if len(x)==0:
+            return HttpResponse(status=404)
+        else:
+            for i in x:
+                d["room_id"]=i.room_id
+                d["maximum_room_occupancy"]=i.maximum_room_occupancy
+                d["guest_email"]=i.guest_email
+                d["room_status"]=i.room_status
+               
+            return Response(status=status.HTTP_200_OK, data=d)
+    elif request.method == 'POST':
+        x = rooms.objects.filter(room_id=id1)
+        if(maximum_room_occupancy1)==0:
+            return HttpResponse(status=401)
+        elif room_id1 == "":
+            return HttpResponse(status=401)
+
+        if len(x)!=0: 
+            return HttpResponse(status=401)
+        else:
+            y= rooms(room_id=room_id1,maximum_room_occupancy=maximum_room_occupancy1,guest_email=guest_email1,room_status=room_status1)
+            y.save()
+            return HttpResponse(status=200)
+            
+    elif request.method == 'DELETE':
+        x= rooms.objects.filter(room_id=id1)
+        if len(x)==0:
+            return HttpResponse(status=404)
+        else:
+            rooms.objects.filter(room_id=id1).delete()
+            return HttpResponse(status=200)
+
+@api_view(['POST'])
+def room_reserve(request,id1):
+    guest_email1 = request.data.get("guest_email")
+    if request.method == 'POST':
+        if id1 == "":
+            return HttpResponse(status=401)
+        x = rooms.objects.filter(room_id=id1)
+        for i in x:
+            if i.room_status == "reserved":
+                return HttpResponse(status=401)
+        if len(x)==0:
+            return HttpResponse(status=404)
+        else:
+            rooms.objects.filter(room_id=id1).update(guest_email=guest_email1,room_status="reserved")
+            return HttpResponse(status=200)
+
+@api_view(['POST'])
+def room_unreserve(request,id1):
+    guest_email1 = request.data.get("guest_email")
+    if request.method == 'POST':
+        x = rooms.objects.filter(room_id=id1)
+        for  i in x:
+            if i.room_status == "unreserved":
+                return HttpResponse(status=401)
+        if len(x)==0:
+            return HttpResponse(status=404)
+        else:
+            rooms.objects.filter(room_id=id1).update(guest_email='',room_status="unreserved")
+            return HttpResponse(status=200)
+    
+@api_view(['GET'])
+def reservedrooms1(request):
+    x = rooms.objects.filter(room_status="reserved")
+    list1=[]
+    d1={}
+    for i in x:
+        d={}
+        d["room_id"]=i.room_id
+        d["maximum_room_occupancy"]=i.maximum_room_occupancy
+        d["guest_email"]=i.guest_email
+        d["room_status"]=i.room_status
+        list1 = list1 +[d]
+    d1["rooms"]=list1
+    return Response(status=status.HTTP_200_OK, data=d1)
+
+
